@@ -1,59 +1,91 @@
-<html> 
-<head> 
-<meta name="robots" content="noindex"> 
-<script src="//cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script> 
-<script type="text/javascript"src="//cdn.jsdelivr.net/gh/clappr/clappr-level-selector-plugin@latest/dist/level-selector.min.js"></script> 
-<script src="https://cdn.jsdelivr.net/npm/@clappr/hlsjs-playback@1.2.0/dist/hlsjs-playback.min.js"></script> 
-<script src="https://cdn.jsdelivr.net/npm/@c3voc/clappr-audio-track-selector@0.2.4/dist/audio-track-selector.min.js"></script> 
-    <script src='https://cdn.jsdelivr.net/gh/kasintv2-0/kasintv/Player/click.js'></script>
-<script type='text/javascript' src='//migrationoctavian.com/5b/28/ce/5b28ce786ec5e459042420096c03022c.js'></script>   
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>HLS Player</title>
+    <style>
+        #video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div id="video-container">
+        <video id="video" controls></video>
+    </div>
 
-<script disable-devtool-auto='' src='https://cdn.jsdelivr.net/npm/disable-devtool@latest'></script>
-<div id="player" style="height: 100%; width: 100%;"></div> 
-</head>   
-<body>  
-
-    
- <script> 
+    <script>
         // Function to get query parameters from URL 
         function getQueryParams(param) { 
             let urlParams = new URLSearchParams(window.location.search); 
             return urlParams.get(param); 
         } 
- 
-        // Get the 'src' parameter from the URL 
+
+        // Get the 'id' parameter from the URL for the Fancode m3u8 link
         var sourceUrl = getQueryParams('id'); 
- 
-        // Default to a placeholder if 'src' is not provided 
+
+        // Default to an empty string if no 'id' is provided
         if (!sourceUrl) { 
-            sourceUrl = ''; 
-        } 
- 
-        // Initialize Clappr player with the source URL 
-        var player = new Clappr.Player({ 
-            source: sourceUrl, 
-            plugins: [HlsjsPlayback, LevelSelector, AudioTrackSelector], 
-            width: '100%', 
-            height: '100%', 
-            autoPlay: false, 
-            mimeType: "application/x-mpegURL", 
-            mediacontrol: { seekbar: "#ff0000", buttons: "#eee" }, 
-            parentId: "#player", 
-            hlsUseNextLevel: false, 
-            hlsMinimumDvrSize: 60, 
-            hlsRecoverAttempts: 16, 
-            hlsPlayback: { 
-                preload: true, 
-                customListeners: [], 
-            }, 
-            playback: { 
-                extrapolatedWindowNumSegments: 2, 
-                triggerFatalErrorOnResourceDenied: false, 
-                hlsjsConfig: { 
-                    // hls.js specific options 
-                }, 
-            }, 
-        }); 
-    </script> 
-    </body> 
+            alert("No video URL provided in the query parameters!");
+            return;
+        }
+
+        // Initialize HLS.js if it's supported
+        if (Hls.isSupported()) {
+            var video = document.getElementById('video');
+            var hls = new Hls();
+
+            // Bind the m3u8 stream source to the video element
+            hls.loadSource(sourceUrl);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                console.log("Manifest parsed successfully.");
+            });
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.error("Network error: ", data);
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.error("Media error: ", data);
+                            break;
+                        case Hls.ErrorTypes.OTHER_ERROR:
+                            console.error("Other error: ", data);
+                            break;
+                        default:
+                            console.error("Fatal error:", data);
+                            break;
+                    }
+                }
+            });
+
+            // Play the video when it's ready
+            video.addEventListener('canplay', function () {
+                video.play();
+            });
+        }
+        // Fallback if HLS.js is not supported
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            var video = document.getElementById('video');
+            video.src = sourceUrl;
+            video.addEventListener('canplay', function () {
+                video.play();
+            });
+        } else {
+            alert("HLS.js is not supported in your browser, and the native HLS player is also unavailable.");
+        }
+    </script>
+</body>
 </html>
