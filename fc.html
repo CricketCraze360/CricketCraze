@@ -3,89 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex">
-    <title>HLS Player</title>
+    <meta name="description" content="Dynamic live streaming player powered by Clappr.">
+    <title>Dynamic Player - KaSin TV</title>
+    <link rel="stylesheet" href="static/clap.css?v=1">
+    <script src="https://cdn.jsdelivr.net/clappr/latest/clappr.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/clappr.level-selector/latest/level-selector.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@clappr/hlsjs-playback@1.0.1/dist/hlsjs-playback.min.js" defer></script>
+    <link rel="icon" href="static/xxx.ico" type="image/x-icon">
     <style>
-        #video-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
+        body {
+            margin: 0;
+            background-color: #000;
+            color: #fff;
         }
-        video {
+        #player {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-    <div id="video-container">
-        <video id="video" controls></video>
-    </div>
-
+    <div id="player" aria-label="Video Player"></div>
     <script>
-        // Function to get query parameters from URL 
-        function getQueryParams(param) { 
-            let urlParams = new URLSearchParams(window.location.search); 
-            return urlParams.get(param); 
-        } 
-
-        // Get the 'id' parameter from the URL for the Fancode m3u8 link
-        var sourceUrl = getQueryParams('id'); 
-
-        // Default to an empty string if no 'id' is provided
-        if (!sourceUrl) { 
-            alert("No video URL provided in the query parameters!");
-            return;
+        // Extract the 'id' parameter from the URL
+        function getParameterByName(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
         }
 
-        // Initialize HLS.js if it's supported
-        if (Hls.isSupported()) {
-            var video = document.getElementById('video');
-            var hls = new Hls();
+        document.addEventListener("DOMContentLoaded", () => {
+            const videoUrl = getParameterByName('id');
 
-            // Bind the m3u8 stream source to the video element
-            hls.loadSource(sourceUrl);
-            hls.attachMedia(video);
+            if (!videoUrl) {
+                document.getElementById('player').innerHTML = '<p style="color:white;text-align:center;margin-top:20%;">No video source provided. Please specify a valid <code>id</code> parameter in the URL.</p>';
+                return;
+            }
 
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                console.log("Manifest parsed successfully.");
+            const player = new Clappr.Player({
+                source: videoUrl,
+                width: '100%',
+                height: '100%',
+                autoPlay: true,
+                plugins: [HlsjsPlayback, LevelSelector],
+                mimeType: "application/x-mpegURL",
+                mediacontrol: { seekbar: "#ff0000", buttons: "#eee" },
+                parentId: "#player",
             });
 
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.error("Network error: ", data);
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.error("Media error: ", data);
-                            break;
-                        case Hls.ErrorTypes.OTHER_ERROR:
-                            console.error("Other error: ", data);
-                            break;
-                        default:
-                            console.error("Fatal error:", data);
-                            break;
-                    }
-                }
+            player.on(Clappr.Events.PLAYER_ERROR, (e) => {
+                console.error("Player Error:", e);
+                document.getElementById('player').innerHTML = '<p style="color:white;text-align:center;margin-top:20%;">Failed to load stream. Please try again later.</p>';
             });
-
-            // Play the video when it's ready
-            video.addEventListener('canplay', function () {
-                video.play();
-            });
-        }
-        // Fallback if HLS.js is not supported
-        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            var video = document.getElementById('video');
-            video.src = sourceUrl;
-            video.addEventListener('canplay', function () {
-                video.play();
-            });
-        } else {
-            alert("HLS.js is not supported in your browser, and the native HLS player is also unavailable.");
-        }
+        });
     </script>
 </body>
 </html>
